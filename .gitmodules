@@ -1,0 +1,3 @@
+[submodule "external/GmSSL"]
+	path = external/GmSSL
+	url = git@github.com:guanzhi/GmSSL.git
