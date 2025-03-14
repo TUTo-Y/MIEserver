@@ -38,8 +38,8 @@ int main()
 
     // 初始化用户集
     user_IP *uds;
-    uds = malloc(FDS_NUM * sizeof(user));
-    memset(uds, 0, FDS_NUM * sizeof(user));
+    uds = malloc(FDS_NUM * sizeof(user_IP));
+    memset(uds, 0, FDS_NUM * sizeof(user_IP));
 
     // 初始化客户端
     int server_fd = serverInit(SERVER_IP, SERVER_PORT);
@@ -70,7 +70,7 @@ int main()
                     if (fds[i].fd == -1)
                     {
                         // 初始化该结构体
-                        memset(&uds[i], 0, sizeof(user));
+                        memset(&uds[i], 0, sizeof(user_IP));
 
                         // 获取新连接
                         fds[i].fd = serverAccept(server_fd, uds[i].IP, &uds[i].port);
@@ -157,7 +157,8 @@ int main()
                             bool repe = false;
                             for (int j = 1; j < FDS_NUM; j++)
                             {
-                                if (fds[j].fd != -1 &&
+                                if (
+                                    fds[j].fd != -1 &&
                                     uds[j].user != NULL &&
                                     encHashCom((uint8_t *)uds[j].user->base.NameHash, (uint8_t *)user_hash) == 0)
                                 {
