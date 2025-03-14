@@ -10,6 +10,9 @@
 #include <gmssl/zuc.h>
 
 #include "log.h"
+#include "hex.h"
+
+#define HASH_STR_SIZE (SM3_DIGEST_SIZE * 2)
 
 // 生成ZUC密钥
 void encZucKeyIv(uint8_t key[ZUC_KEY_SIZE], uint8_t iv[ZUC_IV_SIZE]);
@@ -31,8 +34,36 @@ void encHash(const uint8_t *msg, size_t msg_len, uint8_t digest[SM3_DIGEST_SIZE]
  */
 static inline int encHashCom(const uint8_t a[SM3_DIGEST_SIZE], const uint8_t b[SM3_DIGEST_SIZE])
 {
-    // return memcmp(a, b, SM3_DIGEST_SIZE);
-    return memcmp(a, b, SM3_DIGEST_SIZE) ? (DEBUG("SM3对比错误: a != b\n"), 1) : 0;
+    return memcmp(a, b, SM3_DIGEST_SIZE);
+}
+
+/**
+ * \brief SM3哈希转字符串
+ * \param hash 哈希
+ * \return 字符串，需要手动释放
+ */
+static inline void encHash2Str(const uint8_t hash[SM3_DIGEST_SIZE], char str[HASH_STR_SIZE])
+{
+    bin2hex(hash, str, SM3_DIGEST_SIZE);
+}
+
+/**
+ * \brief 字符串转SM3哈希
+ * \param str 字符串
+ * \param hash 哈希
+ */
+static inline void encStr2Hash(const char *str, uint8_t hash[SM3_DIGEST_SIZE])
+{
+    hex2bin(str, hash, SM3_DIGEST_SIZE);
+}
+
+/**
+ * \brief 打印SM3哈希
+ * \param hash 哈希
+ */
+static inline void encHashPrint(const uint8_t hash[SM3_DIGEST_SIZE])
+{
+    putbin2hex(hash, SM3_DIGEST_SIZE, stdout);
 }
 
 /**
