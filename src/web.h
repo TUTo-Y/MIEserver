@@ -41,6 +41,8 @@ enum
     WEB_MSG_LOGIN_ERROR_USER, // 登录用户不存在
     WEB_MSG_LOGIN_ERROR_PASS, // 登录密码错误
     WEB_MSG_LOGIN_ERROR_REPE, // 重复登录
+
+    WEB_MSG_PAITENT_UPLOAD, // 患者上传图像及其数据
 };
 
 

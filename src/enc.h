@@ -7,6 +7,7 @@
 
 #include <gmssl/sm2.h>
 #include <gmssl/sm3.h>
+#include <gmssl/sm4.h>
 #include <gmssl/zuc.h>
 
 #include "log.h"

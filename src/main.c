@@ -11,6 +11,10 @@
 #include "enc.h"
 #include "web.h"
 #include "user.h"
+
+// test
+#include "RDH.h"
+
 #if 1
 SM2_KEY keyServer;
 
@@ -103,8 +107,8 @@ int main()
                             ERROR("(%s : %d)断开连接 : %s\n", uds[i].IP, uds[i].port, strerror(errno));
                             close(fds[i].fd);
                             fds[i].fd = -1;
+                            break;
                         }
-                        break;
 
                             // 获取用户公钥
                         case WEB_MSG_CPUBLIC_KEY:
@@ -116,8 +120,8 @@ int main()
                             encKEMFree(data);
                             free(der);
                             SUCESS("(%s : %d)成功添加用户公钥\n", uds[i].IP, uds[i].port);
+                            break;
                         }
-                        break;
 
                         // 登录
                         case WEB_MSG_LOGIN:
@@ -180,8 +184,8 @@ int main()
                             webSendFlag(fds[i].fd, type->type == USER_DOCTOR ? WEB_MSG_LOGIN_DOCTOR : WEB_MSG_LOGIN_PATIENT);
 
                             SUCESS("(%s : %d)用户登录 : %s\n", uds[i].IP, uds[i].port, name);
+                            break;
                         }
-                        break;
 
                         // 注册
                         case WEB_MSG_REGISTER:
@@ -218,8 +222,42 @@ int main()
                             webSendFlag(fds[i].fd, WEB_MSG_SUCESS);
 
                             SUCESS("(%s : %d)注册%s : %s\n", uds[i].IP, uds[i].port, flag == WEB_MSG_REGISTER_DOCTOR ? "医生" : "患者", name);
+                            break;
                         }
-                        break;
+
+                        // 患者上传图像及数据
+                        case WEB_MSG_PAITENT_UPLOAD:
+                        {
+                            user_wait wait;
+                            // 接受密钥并解密
+                            ENCkem kem = webRecvData(fds[i].fd, NULL, NULL);
+                            uint8_t *data = encKEMDec(kem, &keyServer);
+                            memcpy((void *)&wait.key1, data, sizeof(uint64_t));
+                            memcpy((void *)&wait.key2, data + sizeof(uint64_t), SM4_KEY_SIZE * 2);
+                            DEBUG("key1: %llx\n", wait.key1);
+                            DEBUG("key2: %llx %llx %llx %llx\n", ((uint64_t *)wait.key2)[0], ((uint64_t *)wait.key2)[1], ((uint64_t *)wait.key2)[2], ((uint64_t *)wait.key2)[3]);
+
+                            // 接受图像
+                            size_t wh = webRecvFlag(fds[i].fd);
+                            wait.w = wh >> 32;
+                            wait.h = wh & 0xffffffff;
+                            wait.img1 = webRecvData(fds[i].fd, NULL, NULL);
+                            wait.img2 = webRecvData(fds[i].fd, NULL, NULL);
+
+                            // 接受m
+                            wait.mSize = webRecvFlag(fds[i].fd);
+                            wait.m = webRecvData(fds[i].fd, NULL, NULL);
+
+                            // 设置list
+                            wait.fds = &fds[i];
+                            wait.uds = &uds[i];
+                            listAddNodeInEnd(&userWait, listDataToNode(listCreateNode(), &wait, sizeof(user_wait), true));
+
+                            // 释放数据
+                            encKEMFree(kem);
+                            free(data);
+                            break;
+                        }
 
                         default:
                             DEBUG("(%s : %d)未知消息 : %lu\n", uds[i].IP, uds[i].port, flag);

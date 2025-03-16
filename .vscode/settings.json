@@ -30,6 +30,8 @@
         "mman.h": "c",
         "time.h": "c",
         "sstream": "c",
-        "ctype.h": "c"
+        "ctype.h": "c",
+        "sm4.h": "c",
+        "sm3.h": "c"
     }
 }

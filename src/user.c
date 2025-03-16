@@ -1,11 +1,14 @@
 #include "user.h"
 
 list user;
+list userWait;
+
 
 void userInit()
 {
     // 初始化用户链表
     listInitList(&user);
+    listInitList(&userWait);
 
     // 打开用户文件
     FILE *userFile = fopen(USER_FILE_PATH, "r");
@@ -121,7 +124,8 @@ void userQuit()
     fclose(userFile);
 
     // 删除链表
-    // listDeleteList(&user, free);
+    listDeleteList(&user, free);
+    listDeleteList(&userWait, free);
 }
 
 user_type *userFindUser(uint8_t *userHash)

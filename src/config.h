@@ -9,7 +9,8 @@
 #define SERVER_PRIVATE_FILE_PATH "private.pem"
 
 // IP和端口
-#define SERVER_IP "192.168.32.129"
+// #define SERVER_IP "192.168.32.129"
+#define SERVER_IP "0"
 #define SERVER_PORT 8899
 
 // 最大连接数

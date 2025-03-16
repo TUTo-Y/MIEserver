@@ -7,6 +7,11 @@ file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")                  # src
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
+# 设置输出目录
+set(BUILD_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/build")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BUILD_OUTPUT_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BUILD_OUTPUT_DIR})
+
 # 创建可执行文件目标
 add_executable(MIEserver ${SRC_FILES})
 
