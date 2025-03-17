@@ -15,7 +15,6 @@
 // test
 #include "RDH.h"
 
-#if 1
 SM2_KEY keyServer;
 
 void run();
@@ -196,7 +195,6 @@ int main()
                         // 注册
                         case WEB_MSG_REGISTER:
                         {
-
                             // 注册的类型
                             FLAG flag = webRecvFlag(fds[i].fd);
 
@@ -235,11 +233,14 @@ int main()
                         case WEB_MSG_PAITENT_UPLOAD:
                         {
                             user_wait wait;
+
                             // 接受密钥并解密
                             ENCkem kem = (ENCkem)webRecvData(fds[i].fd, NULL, NULL);
                             uint8_t *data = encKEMDec(kem, &keyServer);
                             memcpy((void *)&wait.key1, data, sizeof(uint64_t));
                             memcpy((void *)&wait.key2, data + sizeof(uint64_t), SM4_KEY_SIZE * 2);
+                            encKEMFree(kem);
+                            free(data);
 
                             // 接受图像
                             size_t wh = webRecvFlag(fds[i].fd);
@@ -256,10 +257,6 @@ int main()
                             wait.fds = &fds[i];
                             wait.uds = &uds[i];
                             listAddNodeInEnd(&userWait, listDataToNode(listCreateNode(), &wait, sizeof(user_wait), true));
-
-                            // 释放数据
-                            encKEMFree(kem);
-                            free(data);
 
                             run();
                             break;
@@ -385,77 +382,105 @@ void signalQuit(int signal)
 
 void run()
 {
-    start:
+    ENCkem kem;
+    FLAG flag;
     // 检查是否有匹配的
-    if (userWait.count != 0 && userWait2.count != 0)
+    while (userWait.count != 0 && userWait2.count != 0)
     {
-
         // 获取医生和患者
-        list *node;
-        node = listGetNodeFromStart(&userWait);
-        user_wait *patient = ((user_wait *)node->data);
-        free(node);
+        user_wait *patient = ((user_wait *)(userWait.bk)->data);
+        user_wait2 *doctor = ((user_wait2 *)(userWait2.bk)->data);
 
-        node = userWait2.bk;
-        DEBUG("匹配:医生(%s : %d) 患者(%s : %d)\n", ((user_wait *)node->data)->uds->IP, ((user_wait *)node->data)->uds->port, patient->uds->IP, patient->uds->port);
-
-        /* 向患者确认是否允许医生查看数据 */
-        webSendFlag(patient->fds->fd, WEB_MSG_PAITENT_CHECK);
-        webSendData(patient->fds->fd, (char *)&((user_wait *)node->data)->uds->user->base.Name, NAME_SIZE);
-        if (webRecvFlag(patient->fds->fd) == WEB_MSG_PAITENT_YES)
+        // 检查医生是否在线
+        if (doctor->fds->fd == -1)
         {
-            // 取出医生
-            node = listGetNodeFromStart(&userWait2);
-            user_wait2 *doctor = (user_wait2 *)node->data;
+            list *node = listGetNodeFromStart(&userWait2);
             free(node);
+            continue;
+        }
+        // 检查患者是否在线
+        if (patient->fds->fd == -1)
+        {
+            free(patient->m);
+            free(patient->img1);
+            free(patient->img2);
 
-            /* 向医生发送数据 */
-            webSendFlag(doctor->fds->fd, WEB_MSG_DOCTOR_WAIT_OVER);
+            list *node = listGetNodeFromStart(&userWait);
+            free(node);
+            continue;
+        }
 
-            uint8_t key[sizeof(size_t) + SM4_KEY_SIZE * 2];
-            memcpy(key, (void *)&patient->key1, sizeof(size_t));
-            memcpy(key + sizeof(size_t), (void *)&patient->key2, SM4_KEY_SIZE * 2);
-            ENCkem kem = (ENCkem)encKEMEnc((uint8_t *)key, sizeof(key), &doctor->uds->key);
-            webSendData(doctor->fds->fd, (char *)kem, encKEMSizeKEM(kem));
-            encKEMFree(kem);
-            webSendFlag(doctor->fds->fd, ((size_t)patient->w )<< 32 | patient->h);
-            webSendData(doctor->fds->fd, patient->img1, patient->w * patient->h);
-            webSendData(doctor->fds->fd, patient->img2, patient->w * patient->h);
+        // 匹配
+        DEBUG("匹配:(%s : %d)医生[%s] <------> (%s : %d)患者[%s]\n",
+              doctor->uds->IP, doctor->uds->port, doctor->uds->user->base.Name,
+              patient->uds->IP, patient->uds->port, patient->uds->user->base.Name);
 
-            webSendFlag(doctor->fds->fd, patient->mSize);
-            webSendData(doctor->fds->fd, patient->m, patient->mSize);
+        // 向医生发送请求治疗
+        webSendFlag(doctor->fds->fd, WEB_MSG_DOCTOR_MSG);
 
-            /* 接受医生的新数据 */
-            FLAG flag = webRecvFlag(doctor->fds->fd);
-            kem = (ENCkem)webRecvData(doctor->fds->fd, NULL, NULL);
-            uint8_t *data = encKEMDec(kem, &keyServer);
-            size_t data_size= encKEMSizeText(kem);
-            encKEMFree(kem);
+        // 向医生发送图像
+        webSendFlag(doctor->fds->fd, ((size_t)patient->w) << 32 | patient->h);
+        webSendData(doctor->fds->fd, patient->img1, patient->w * patient->h);
+        webSendData(doctor->fds->fd, patient->img2, patient->w * patient->h);
+        webSendFlag(doctor->fds->fd, patient->mSize);
+        webSendData(doctor->fds->fd, patient->m, patient->mSize);
 
-            /* 发送给患者 */
-            webSendFlag(patient->fds->fd, WEB_MSG_PAITENT_DOWNLOAD);
-            kem = encKEMEnc(data, data_size, &patient->uds->key);
+        // 向医生发送key1
+        kem = (ENCkem)encKEMEnc((uint8_t *)&patient->key1, sizeof(patient->key1), &doctor->uds->key);
+        webSendData(doctor->fds->fd, (char *)kem, encKEMSizeKEM(kem));
+        encKEMFree(kem);
+
+        // 等待医生确认治疗
+        flag = webRecvFlag(doctor->fds->fd);
+        if (flag == WEB_MSG_DOCTOR_YES)
+        {
+            // 询问患者是否允许治疗
+            webSendFlag(patient->fds->fd, WEB_MSG_PAITENT_MSG);
+
+            // 发送医生的信息
+            kem = (ENCkem)encKEMEnc(doctor->uds->user->base.Name, sizeof(doctor->uds->user->base.Name), &patient->uds->key);
             webSendData(patient->fds->fd, (char *)kem, encKEMSizeKEM(kem));
             encKEMFree(kem);
-            free(data);
+
+            // 等待患者确认治疗
+            flag = webRecvFlag(patient->fds->fd);
+            if (flag == WEB_MSG_PAITENT_YES)
+            {
+                // 向医生发送治疗请求
+                webSendFlag(doctor->fds->fd, WEB_MSG_DOCTOR_YES);
+
+                // 向医生发送key2
+                kem = (ENCkem)encKEMEnc(patient->key2, sizeof(patient->key2), &doctor->uds->key);
+                webSendData(doctor->fds->fd, (char *)kem, encKEMSizeKEM(kem));
+                encKEMFree(kem);
+
+                // 等待医生发送数据
+                kem = (ENCkem)webRecvData(doctor->fds->fd, NULL, NULL);
+                uint8_t *data = encKEMDec(kem, &keyServer);
+                size_t data_size = encKEMSizeText(kem);
+                encKEMFree(kem);
+
+                // 发送给患者
+                kem = encKEMEnc(data, data_size, &patient->uds->key);
+                webSendData(patient->fds->fd, (char *)kem, encKEMSizeKEM(kem));
+                encKEMFree(kem);
+
+                // 释放数据
+                free(data);
+            }
+            else
+                // 向医生发送不接受治疗请求
+                webSendFlag(doctor->fds->fd, WEB_MSG_DOCTOR_NO);
+
+            // 释放患者数据
+            free(patient->m);
+            free(patient->img1);
+            free(patient->img2);
+            list *node = listGetNodeFromStart(&userWait);
+            free(node);
         }
+        // 释放医生数据
+        list *node = listGetNodeFromStart(&userWait2);
+        free(node);
     }
 }
-
-#else
-int main()
-{
-    char str[0x100] = {"HelloWorld!"};
-    uint8_t hash[SM3_DIGEST_SIZE];
-    encHash((uint8_t *)str, strlen(str), (uint8_t *)hash);
-
-    char hex[0x100] = {0};
-    bin2hex(hash, hex, SM3_DIGEST_SIZE);
-    printf("hash: %s\n", hex);
-    hex2bin(hex, hash, SM3_DIGEST_SIZE);
-    bin2hex(hash, hex, SM3_DIGEST_SIZE);
-    printf("hash: %s\n", hex);
-
-    return 0;
-}
-#endif

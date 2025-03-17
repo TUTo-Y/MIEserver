@@ -42,18 +42,16 @@ enum
     WEB_MSG_LOGIN_ERROR_PASS, // 登录密码错误
     WEB_MSG_LOGIN_ERROR_REPE, // 重复登录
 
-    WEB_MSG_PAITENT_UPLOAD,   // 患者上传图像及其数据
-    WEB_MSG_PAITENT_CHECK,    // 患者检查医生是否允许上传
-    WEB_MSG_PAITENT_YES,      // 患者允许上传
-    WEB_MSG_PAITENT_NO,       // 患者不允许上传
-    WEB_MSG_PAITENT_DOWNLOAD, // 患者下载图像及其数据成功
+    WEB_MSG_PAITENT_MSG,    // 患者上传图像及其数据
+    WEB_MSG_PAITENT_YES,    // 患者允许上传
+    WEB_MSG_PAITENT_NO,     // 患者不允许上传
+    WEB_MSG_PAITENT_UPLOAD, // 患者上传请求
 
-    WEB_MSG_DOCTOR_WAIT,      // 医生等待
-    WEB_MSG_DOCTOR_WAIT_OVER,      // 医生发送数据
-    WEB_MSG_DOCTOR_SEND,      // 医生发送数据
+    WEB_MSG_DOCTOR_MSG,  // 医生消息
+    WEB_MSG_DOCTOR_YES,  // 医生确认
+    WEB_MSG_DOCTOR_NO,   // 医生拒绝
+    WEB_MSG_DOCTOR_WAIT, // 医生等待请求
 };
-
-
 
 /**
  * \brief 初始化服务器

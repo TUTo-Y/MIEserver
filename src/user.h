@@ -83,8 +83,8 @@ typedef struct
     char *img1;
     char *img2;
 
-    int mSize;
     char *m;
+    int mSize;
 } user_wait;
 
 // 等待治疗的医生
