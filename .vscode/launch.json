@@ -11,6 +11,7 @@
             "program": "${workspaceFolder}/build/MIEserver",
             // "program": "${workspaceFolder}/build/src/MIEserver",
             // "program": "${workspaceFolder}/build/test/sm2",
+            // "program": "${workspaceFolder}/build/test/main",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",

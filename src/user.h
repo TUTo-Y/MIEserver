@@ -31,7 +31,7 @@ typedef struct
 {
     uint8_t NameHash[SM3_DIGEST_SIZE]; // 用户名的hash
     uint8_t PassHash[SM3_DIGEST_SIZE]; // 密码的hash
-    char Name[NAME_SIZE];           // 用户名
+    char Name[NAME_SIZE];              // 用户名
 } user_base;
 
 // 医生用户
@@ -71,7 +71,7 @@ typedef struct
 extern list user;
 
 // 等待检查的用户
-typedef struct 
+typedef struct
 {
     struct pollfd *fds;
     user_IP *uds;
@@ -79,15 +79,25 @@ typedef struct
     uint64_t key1;
     uint8_t key2[SM4_KEY_SIZE * 2];
 
+    int w, h;
     char *img1;
     char *img2;
-    int w, h;
-    
-    char *m;
-    int mSize;
-}user_wait;
 
-extern list userWait;
+    int mSize;
+    char *m;
+} user_wait;
+
+// 等待治疗的医生
+typedef struct
+{
+    struct pollfd *fds;
+    user_IP *uds;
+
+    
+} user_wait2;
+
+extern list userWait;  // 等待检查的用户
+extern list userWait2; // 等待治疗的医生
 
 void userInit();
 

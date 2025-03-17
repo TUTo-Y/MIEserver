@@ -32,6 +32,7 @@
         "sstream": "c",
         "ctype.h": "c",
         "sm4.h": "c",
-        "sm3.h": "c"
+        "sm3.h": "c",
+        "sm2.h": "c"
     }
 }

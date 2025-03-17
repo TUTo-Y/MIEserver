@@ -104,16 +104,6 @@ list *listGetNodeFromStart(list *l)
     if (l == NULL || l->count == 0)
         return NULL;
 
-    // list *node = l->bk;
-    // list *bck = node->bk;
-
-    // // 解链
-    // l->bk = bck;
-    // bck->fd = l;
-
-    // // 重置node定位
-    // LIST_FD_BK_INIT(node);
-
     list *node = l->bk;
     list *tmp;
     LIST_UNLINK(node, tmp);

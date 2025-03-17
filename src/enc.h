@@ -130,4 +130,51 @@ static inline void encKEMFree(ENCkem kem)
     free(kem);
 }
 
+
+typedef enum
+{
+    ENC_TYPE_SM2_PUBLIC,  // sm2公钥
+    ENC_TYPE_SM2_PRIVATE, // sm2私钥
+} ENC_TYPE_SM2;
+typedef int (*enc_sm2_key_save_fun)(const SM2_KEY *a, FILE *fp);
+typedef int (*enc_sm2_key_load_fun)(SM2_KEY *a, FILE *fp);
+
+/**
+ * \brief 保存sm2密钥成pem格式
+ * \param key 密钥
+ * \param buf pem
+ * \param len 长度
+ * \param type 类型
+ */
+void encSM2KeySave(const SM2_KEY *key, uint8_t **buf, size_t *len, ENC_TYPE_SM2 type);
+
+static inline void encSM2PublicSave(const SM2_KEY *key, uint8_t **buf, size_t *len)
+{
+    encSM2KeySave(key, buf, len, ENC_TYPE_SM2_PUBLIC);
+}
+
+static inline void encSM2PrivateSave(const SM2_KEY *key, uint8_t **buf, size_t *len)
+{
+    encSM2KeySave(key, buf, len, ENC_TYPE_SM2_PRIVATE);
+}
+
+/**
+ * \brief 读取pem格式的sm2密钥
+ * \param key 密钥
+ * \param buf pem
+ * \param len 长度
+ * \param type 类型
+ */
+void encSM2KeyLoad(SM2_KEY *key, const uint8_t *buf, size_t len, ENC_TYPE_SM2 type);
+
+static inline void encSM2PublicLoad(SM2_KEY *key, const uint8_t *buf, size_t len)
+{
+    encSM2KeyLoad(key, buf, len, ENC_TYPE_SM2_PUBLIC);
+}
+
+static inline void encSM2PrivateLoad(SM2_KEY *key, const uint8_t *buf, size_t len)
+{
+    encSM2KeyLoad(key, buf, len, ENC_TYPE_SM2_PRIVATE);
+}
+
 #endif // ENC_H

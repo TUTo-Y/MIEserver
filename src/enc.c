@@ -70,3 +70,35 @@ uint8_t *encKEMDec(const ENCkem kem, const SM2_KEY *pri_key)
 
     return plain;
 }
+
+enc_sm2_key_save_fun encSM2KeySaveFun[2] = {sm2_public_key_info_to_pem, sm2_private_key_info_to_pem};
+enc_sm2_key_load_fun encSM2KeyLoadFun[2] = {sm2_public_key_info_from_pem, sm2_private_key_info_from_pem};
+void encSM2KeySave(const SM2_KEY *key, uint8_t **buf, size_t *len, ENC_TYPE_SM2 type)
+{
+    FILE *fp = tmpfile();
+
+    // 保存sm2密钥为pem格式公钥
+    encSM2KeySaveFun[type](key, fp);
+
+    *len = ftell(fp);
+    *buf = (uint8_t *)malloc(*len);
+
+    // 读取文件
+    rewind(fp);
+    fread(*buf, *len, 1, fp);
+    fclose(fp);
+}
+
+void encSM2KeyLoad(SM2_KEY *key, const uint8_t *buf, size_t len, ENC_TYPE_SM2 type)
+{
+    FILE *fp = tmpfile();
+
+    // 写入文件
+    fwrite(buf, len, 1, fp);
+    rewind(fp);
+
+    // 读取sm2密钥
+    encSM2KeyLoadFun[type](key, fp);
+
+    fclose(fp);
+}

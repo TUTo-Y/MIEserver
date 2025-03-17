@@ -1,7 +1,8 @@
 #include "user.h"
 
 list user;
-list userWait;
+list userWait;  // 等待检查的用户
+list userWait2; // 等待治疗的医生
 
 
 void userInit()
@@ -9,6 +10,7 @@ void userInit()
     // 初始化用户链表
     listInitList(&user);
     listInitList(&userWait);
+    listInitList(&userWait2);
 
     // 打开用户文件
     FILE *userFile = fopen(USER_FILE_PATH, "r");
@@ -126,6 +128,7 @@ void userQuit()
     // 删除链表
     listDeleteList(&user, free);
     listDeleteList(&userWait, free);
+    listDeleteList(&userWait2, free);
 }
 
 user_type *userFindUser(uint8_t *userHash)

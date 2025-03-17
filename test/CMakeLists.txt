@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 # 创建可执行文件目标
 add_executable(sm2 sm2.c)
 add_executable(sm4 sm4.c)
+add_executable(main main.c)
 
 
 # 设置输出目录
@@ -18,3 +19,4 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BUILD_OUTPUT_DIR})
 # 链接库到可执行文件
 target_link_libraries(sm2 PRIVATE m pthread gmssl)
 target_link_libraries(sm4 PRIVATE m pthread gmssl)
+target_link_libraries(main PRIVATE m pthread gmssl)

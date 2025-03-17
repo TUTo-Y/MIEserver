@@ -18,6 +18,7 @@
 #if 1
 SM2_KEY keyServer;
 
+void run();
 void Check();
 void Init();
 void Quit();
@@ -113,13 +114,14 @@ int main()
                             // 获取用户公钥
                         case WEB_MSG_CPUBLIC_KEY:
                         {
-                            ENCkem data = (ENCkem)webRecvData(fds[i].fd, NULL, NULL);                    // 获取数据
-                            uint8_t *der = encKEMDec(data, &keyServer);                                  // 解密数据
-                            size_t def_len = encKEMSizeText(data);                                       // 获取解密后数据长度
-                            sm2_public_key_info_from_der(&uds[i].key, (const uint8_t **)&der, &def_len); // 从der中获取公钥
+                            ENCkem data = (ENCkem)webRecvData(fds[i].fd, NULL, NULL); // 获取数据
+                            uint8_t *pem = encKEMDec(data, &keyServer);               // 解密数据
+                            size_t pem_len = encKEMSizeText(data);                    // 获取解密后数据长度
+                            encSM2PublicLoad(&uds[i].key, pem, pem_len);              // 加载公钥
                             encKEMFree(data);
-                            free(der);
+                            free(pem);
                             SUCESS("(%s : %d)成功添加用户公钥\n", uds[i].IP, uds[i].port);
+
                             break;
                         }
 
@@ -137,6 +139,10 @@ int main()
                             memcpy(user_hash, buf, SM3_DIGEST_SIZE);
                             memcpy(pass_hash, buf + SM3_DIGEST_SIZE, SM3_DIGEST_SIZE);
                             memcpy(name, buf + SM3_DIGEST_SIZE * 2, 0x20);
+
+                            // 释放数据
+                            encKEMFree(kem);
+                            free(buf);
 
                             // 检查用户是否已经存在
                             user_type *type = userFindUser((char *)user_hash);
@@ -230,12 +236,10 @@ int main()
                         {
                             user_wait wait;
                             // 接受密钥并解密
-                            ENCkem kem = webRecvData(fds[i].fd, NULL, NULL);
+                            ENCkem kem = (ENCkem)webRecvData(fds[i].fd, NULL, NULL);
                             uint8_t *data = encKEMDec(kem, &keyServer);
                             memcpy((void *)&wait.key1, data, sizeof(uint64_t));
                             memcpy((void *)&wait.key2, data + sizeof(uint64_t), SM4_KEY_SIZE * 2);
-                            DEBUG("key1: %llx\n", wait.key1);
-                            DEBUG("key2: %llx %llx %llx %llx\n", ((uint64_t *)wait.key2)[0], ((uint64_t *)wait.key2)[1], ((uint64_t *)wait.key2)[2], ((uint64_t *)wait.key2)[3]);
 
                             // 接受图像
                             size_t wh = webRecvFlag(fds[i].fd);
@@ -256,9 +260,20 @@ int main()
                             // 释放数据
                             encKEMFree(kem);
                             free(data);
+
+                            run();
                             break;
                         }
+                        case WEB_MSG_DOCTOR_WAIT:
+                        {
+                            user_wait2 wait;
+                            wait.fds = &fds[i];
+                            wait.uds = &uds[i];
+                            listAddNodeInEnd(&userWait2, listDataToNode(listCreateNode(), &wait, sizeof(user_wait2), true));
 
+                            run();
+                            break;
+                        }
                         default:
                             DEBUG("(%s : %d)未知消息 : %lu\n", uds[i].IP, uds[i].port, flag);
                             break;
@@ -367,6 +382,66 @@ void signalQuit(int signal)
 {
     sem_post(&sem_quit); // 释放信号量以退出主循环
 }
+
+void run()
+{
+    start:
+    // 检查是否有匹配的
+    if (userWait.count != 0 && userWait2.count != 0)
+    {
+
+        // 获取医生和患者
+        list *node;
+        node = listGetNodeFromStart(&userWait);
+        user_wait *patient = ((user_wait *)node->data);
+        free(node);
+
+        node = userWait2.bk;
+        DEBUG("匹配:医生(%s : %d) 患者(%s : %d)\n", ((user_wait *)node->data)->uds->IP, ((user_wait *)node->data)->uds->port, patient->uds->IP, patient->uds->port);
+
+        /* 向患者确认是否允许医生查看数据 */
+        webSendFlag(patient->fds->fd, WEB_MSG_PAITENT_CHECK);
+        webSendData(patient->fds->fd, (char *)&((user_wait *)node->data)->uds->user->base.Name, NAME_SIZE);
+        if (webRecvFlag(patient->fds->fd) == WEB_MSG_PAITENT_YES)
+        {
+            // 取出医生
+            node = listGetNodeFromStart(&userWait2);
+            user_wait2 *doctor = (user_wait2 *)node->data;
+            free(node);
+
+            /* 向医生发送数据 */
+            webSendFlag(doctor->fds->fd, WEB_MSG_DOCTOR_WAIT_OVER);
+
+            uint8_t key[sizeof(size_t) + SM4_KEY_SIZE * 2];
+            memcpy(key, (void *)&patient->key1, sizeof(size_t));
+            memcpy(key + sizeof(size_t), (void *)&patient->key2, SM4_KEY_SIZE * 2);
+            ENCkem kem = (ENCkem)encKEMEnc((uint8_t *)key, sizeof(key), &doctor->uds->key);
+            webSendData(doctor->fds->fd, (char *)kem, encKEMSizeKEM(kem));
+            encKEMFree(kem);
+            webSendFlag(doctor->fds->fd, ((size_t)patient->w )<< 32 | patient->h);
+            webSendData(doctor->fds->fd, patient->img1, patient->w * patient->h);
+            webSendData(doctor->fds->fd, patient->img2, patient->w * patient->h);
+
+            webSendFlag(doctor->fds->fd, patient->mSize);
+            webSendData(doctor->fds->fd, patient->m, patient->mSize);
+
+            /* 接受医生的新数据 */
+            FLAG flag = webRecvFlag(doctor->fds->fd);
+            kem = (ENCkem)webRecvData(doctor->fds->fd, NULL, NULL);
+            uint8_t *data = encKEMDec(kem, &keyServer);
+            size_t data_size= encKEMSizeText(kem);
+            encKEMFree(kem);
+
+            /* 发送给患者 */
+            webSendFlag(patient->fds->fd, WEB_MSG_PAITENT_DOWNLOAD);
+            kem = encKEMEnc(data, data_size, &patient->uds->key);
+            webSendData(patient->fds->fd, (char *)kem, encKEMSizeKEM(kem));
+            encKEMFree(kem);
+            free(data);
+        }
+    }
+}
+
 #else
 int main()
 {
