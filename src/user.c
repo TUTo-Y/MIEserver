@@ -158,3 +158,13 @@ void userAddUser(USER_TYPE type, char NameHash[SM3_DIGEST_SIZE], char PassHash[S
     // 写入链表
     listAddNodeInEnd(&user, listDataToNode(listCreateNode(), &tmp, sizeof(user_type), true));
 }
+
+void userFreeWait(user_wait *wait)
+{
+    for(int i = 0; i < wait->imgNum; i++)
+    {
+        free(wait->imgData[i].img1);
+        free(wait->imgData[i].img2);
+        free(wait->imgData[i].m);
+    }
+}

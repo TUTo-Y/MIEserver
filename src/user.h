@@ -70,21 +70,32 @@ typedef struct
 
 extern list user;
 
+typedef struct
+{
+    // 图像
+    char *img1;
+    char *img2;
+    int w, h;
+    size_t size; // 嵌入的数据大小
+
+    // 图像的额外数据
+    char *m;
+    int mSize;
+} user_img_data;
+
 // 等待检查的用户
 typedef struct
 {
     struct pollfd *fds;
     user_IP *uds;
 
+    // 图像密钥
     uint64_t key1;
     uint8_t key2[SM4_KEY_SIZE * 2];
 
-    int w, h;
-    char *img1;
-    char *img2;
-
-    char *m;
-    int mSize;
+    // 图像数据
+    user_img_data imgData[5];
+    int imgNum; // 图像数量
 } user_wait;
 
 // 等待治疗的医生
@@ -92,8 +103,6 @@ typedef struct
 {
     struct pollfd *fds;
     user_IP *uds;
-
-    
 } user_wait2;
 
 extern list userWait;  // 等待检查的用户
@@ -108,5 +117,7 @@ user_type *userFindUser(uint8_t *userHash);
 
 // 添加用户
 void userAddUser(USER_TYPE type, char NameHash[SM3_DIGEST_SIZE], char PassHash[SM3_DIGEST_SIZE], char Name[0x20]);
+
+void userFreeWait(user_wait *wait);
 
 #endif // USER_H

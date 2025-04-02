@@ -86,7 +86,7 @@ static inline void webSendFlag(int fd, FLAG flag)
 static inline FLAG webRecvFlag(int fd)
 {
     FLAG flag;
-    int ret = recv(fd, (void *)&flag, sizeof(FLAG), MSG_WAITALL);
+    ssize_t ret = recv(fd, (void *)&flag, sizeof(FLAG), MSG_WAITALL);
     if (ret <= 0)
         flag = WEB_MSG_DISCONNECT;
     return flag;

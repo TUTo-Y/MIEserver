@@ -1,92 +1,47 @@
+#include <wchar.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <gmssl/sm2.h>
+#include <gmssl/sm4.h>
+
 int main()
 {
-    SM2_KEY key;
-    SM2_KEY key_public;
-    uint8_t buf[SM2_PRIVATE_KEY_BUF_SIZE] = {0};
-    uint8_t *out = buf;
-    uint8_t **out2 = &out;
-    uint8_t *out3 = NULL;
+    // 初始化密钥
+    uint8_t key[SM4_KEY_SIZE * 2] = {0};
+    memcpy(key, "1234567890qwepoirtylkjasd,m.ndf.][.cq=-c:OAJPOfojawpabxwbioqhdoi{OWIQFQD:JWQD}]", SM4_KEY_SIZE * 2);
 
-    size_t outlen = 0;
-
-    // 生成sm2密钥
-    sm2_key_generate(&key);
-
-    FILE *fp = tmpfile();
-
-    // // 保存sm2密钥为pem格式公钥
-    // sm2_public_key_info_to_pem(&key, fp);
-    // rewind(fp);
-    // // 从pem格式公钥中恢复公钥
-    // sm2_public_key_info_from_pem(&key_public, fp);
-    // fclose(fp);
-
-    // 保存sm2密钥为der格式公钥
-    sm2_public_key_info_to_der(&key, &out3, &outlen);
-
-    // 从der格式公钥中恢复公钥
-    sm2_public_key_info_from_der(&key_public, &out3, &outlen);
-
-    sm2_public_key_print(stdout, 0, 0, NULL, &key_public);
-    sm2_public_key_print(stdout, 0, 0, NULL, &key);
-    
-    // 加密一段数据
-    uint8_t data[] = "hello world";
-    SM2_CIPHERTEXT ciphertext;
-    sm2_do_encrypt(&key_public, data, sizeof(data), &ciphertext);
-    
-    // 解密
-    uint8_t t1[0x100];
-    uint8_t *t3 = t1;
+    // 使用 SM4 加密
+    uint8_t *plaintext = "我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n我超级爱吃汉堡包哦, 我是2219878724@@@@@@\n";
+    size_t plaintext_len = (strlen(plaintext) + 1);
+    uint8_t *ciphertext = NULL;
+    size_t ciphertext_len = 0;
+    size_t t1 = 0;
     size_t t2 = 0;
-    sm2_do_decrypt(&key, &ciphertext, t3, &t2);
 
-    // 打印解密结果
-    printf("plaintext: %s\n", t1);
+    printf("size = %ld\n\n", (strlen(plaintext) + 1));
 
+    // 加密
+    ciphertext = malloc((strlen(plaintext) + 1) + 0x20);
+    ciphertext_len = 0;
+    
+    SM4_CBC_CTX sm4_key;
+    t1 = 0x10;
+    sm4_cbc_encrypt_init(&sm4_key, &key[0], &key[SM4_KEY_SIZE]);
+    sm4_cbc_encrypt_update(&sm4_key, (const uint8_t *)plaintext, plaintext_len, ciphertext, &t1);
+    sm4_cbc_encrypt_finish(&sm4_key, ciphertext + t1, &t2);
+    ciphertext_len = t1 + t2;
+    printf("t1 : %ld\nt2 : %ld\n\n", t1, t2);
+
+    // 解密
+    plaintext = malloc(ciphertext_len);
+    plaintext_len = 0;
+    t1 = 0;
+    sm4_cbc_decrypt_init(&sm4_key, &key[0], &key[SM4_KEY_SIZE]);
+    sm4_cbc_decrypt_update(&sm4_key, ciphertext, ciphertext_len, plaintext, &t1);
+    sm4_cbc_decrypt_finish(&sm4_key, plaintext + t1, &t2);
+
+    printf("t1 : %ld\nt2 : %ld\n\n", t1, t2);
+    printf("文本内容:");
+    printf("[%s]\n", plaintext);
     return 0;
 }
-
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <gmssl/sm2.h>
-// int main()
-// {
-//     SM2_KEY key;
-//     SM2_KEY key_public;
-//     uint8_t buf[SM2_PRIVATE_KEY_BUF_SIZE] = {0};
-//     uint8_t *out = buf;
-//     uint8_t **out2 = &out;
-//     size_t outlen = 0;
-
-//     // 生成sm2密钥
-//     sm2_key_generate(&key);
-
-//     // 保存sm2密钥为der格式公钥
-//     sm2_public_key_info_to_der(&key, out2, &outlen);
-
-//     // 从der格式公钥中恢复公钥
-//     sm2_public_key_info_from_der(&key_public, out2, &outlen);
-
-//     sm2_public_key_print(stdout, 0, 0, NULL, &key_public);
-//     sm2_public_key_print(stdout, 0, 0, NULL, &key);
-    
-//     // 加密一段数据
-//     uint8_t data[] = "hello world";
-//     SM2_CIPHERTEXT ciphertext;
-//     sm2_do_encrypt(&key_public, data, sizeof(data), &ciphertext);
-    
-//     // 解密
-//     uint8_t t1[0x100];
-//     uint8_t *t3 = t1;
-//     size_t t2 = 0;
-//     sm2_do_decrypt(&key, &ciphertext, t3, &t2);
-
-//     // 打印解密结果
-//     printf("plaintext: %s\n", t1);
-
-//     return 0;
-// }
