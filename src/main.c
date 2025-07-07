@@ -319,11 +319,10 @@ int main()
                             break;
                         }
 
-                        fds[0].revents = 0;
+                        fds[i].revents = 0;
                     }
                 }
             }
-
             ready_num--;
         }
     }
